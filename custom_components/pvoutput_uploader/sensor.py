@@ -184,7 +184,7 @@ def _number(value: float) -> str:
 class FieldSensor(PVOutputEntity, SensorEntity):
     """A configured PVOutput field: what is sent, and where it comes from.
 
-    The state is the Home Assistant sensor the field reads, or the fixed value.
+    The state is the source sensor's friendly name, or the fixed value.
     """
 
     def __init__(self, coordinator: PVOutputCoordinator, mapping: FieldMapping) -> None:
@@ -214,9 +214,16 @@ class FieldSensor(PVOutputEntity, SensorEntity):
 
     @property
     def native_value(self) -> str:
-        """Return the source sensor, or the fixed value."""
-        if self.mapping.entity_id:
-            return self.mapping.entity_id
+        """Return a readable source name, or the fixed value."""
+        if entity_id := self.mapping.entity_id:
+            if (state := self.hass.states.get(entity_id)) is not None:
+                return state.name[:255]
+            registry_entry = er.async_get(self.hass).async_get(entity_id)
+            if registry_entry is not None:
+                name = registry_entry.name or registry_entry.original_name
+                if name:
+                    return name[:255]
+            return entity_id.split(".", 1)[-1].replace("_", " ")[:255]
         return _number(self.mapping.constant or 0)
 
     @property
@@ -235,6 +242,7 @@ class FieldSensor(PVOutputEntity, SensorEntity):
         if m.active and not self._configured_to_send:
             attrs["not_configured_to_send_because"] = "needs a PVOutput donor account"
         if m.entity_id:
+            attrs["source_entity"] = m.entity_id
             if (state := self.hass.states.get(m.entity_id)) is not None:
                 attrs["source_name"] = state.name
             attrs["value_per_interval"] = m.aggregate
