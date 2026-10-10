@@ -253,10 +253,11 @@ async def test_field_sensors(recorder_mock, hass: HomeAssistant, entry: MockConf
         await _setup(hass, entry)
 
     v5 = hass.states.get("sensor.my_system_v5_ambient")
-    assert v5.state == "sensor.outside"
+    assert v5.state == "Outside"
     assert v5.attributes["pvoutput_field"] == "v5"
     assert v5.attributes["pvoutput_field_name"] == "Temperature"
     assert v5.attributes["source"] == "sensor"
+    assert v5.attributes["source_entity"] == "sensor.outside"
     assert v5.attributes["source_name"] == "Outside"
     assert v5.attributes["value_per_interval"] == "average"
     assert v5.attributes["configured_to_send"] is True
