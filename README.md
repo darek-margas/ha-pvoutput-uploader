@@ -210,8 +210,8 @@ is only stored, ready for a later reupload.
 The PVOutput system's device page shows what is uploaded and as what:
 
 - **One sensor per configured field**, named after the PVOutput field and your label (e.g.
-  *v5 Ambient*). Its state is the Home Assistant sensor the field reads, or the fixed
-  value. Attributes: the PVOutput field and its standard name, active or passive,
+  *v5 Ambient*). Its state is the source sensor's friendly name, or the fixed
+  value. The source entity ID is available in the `source_entity` attribute. Attributes: the PVOutput field and its standard name, active or passive,
   `configured_to_send` (active and allowed by the account type; donor-only fields on a
   standard account are not), how the 5 minute values are combined, and the last recorded
   value with its time. The icon follows `configured_to_send`. It does not show whether
