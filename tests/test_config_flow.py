@@ -244,7 +244,7 @@ async def test_edit_and_remove(recorder_mock, hass: HomeAssistant, sensors) -> N
     result = await _choose(hass, await _menu(hass, entry), "edit_field")
     result = await _configure(hass, result, {"field": "v5"})
     assert result["step_id"] == "edit_details"
-    assert _schema_keys(result) == ["entity_id", "name", "active", "aggregate"]
+    assert _schema_keys(result) == ["entity_id", "name", "active", "source_unit", "aggregate"]
     result = await _configure(
         hass, result,
         {"entity_id": "sensor.outside", "name": "Ambient", "active": False, "aggregate": "last"},
@@ -297,3 +297,19 @@ async def test_history_needs_running_integration(recorder_mock, hass: HomeAssist
         result = await _choose(hass, await _menu(hass, entry), step)
         assert result["type"] is FlowResultType.ABORT
         assert result["reason"] == "not_loaded"
+
+
+async def test_unitless_sensor_requires_explicit_unit(recorder_mock, hass: HomeAssistant) -> None:
+    hass.states.async_set("sensor.unitless", "68")
+    entry = options_entry(hass)
+    result = await _add(hass, entry, "add_sensor")
+    result = await _configure(hass, result, {"entity_id": "sensor.unitless", "field": "v5"})
+    assert result["step_id"] == "sensor_details"
+    details = {"name": "Temperature", "active": True, "aggregate": "average"}
+    result = await _configure(hass, result, details)
+    assert result["errors"] == {"base": "unit_required"}
+    result = await _configure(hass, result, details | {"source_unit": "W"})
+    assert result["errors"] == {"base": "unit_mismatch"}
+    result = await _configure(hass, result, details | {"source_unit": "°F"})
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert entry.options[CONF_FIELDS][0]["source_unit"] == "°F"

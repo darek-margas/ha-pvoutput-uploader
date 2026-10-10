@@ -10,7 +10,7 @@ import logging
 from typing import Any
 
 from homeassistant.components.recorder import get_instance, history
-from homeassistant.components.recorder.statistics import statistics_during_period
+from homeassistant.components.recorder.statistics import get_metadata, statistics_during_period
 from homeassistant.const import (
     ATTR_UNIT_OF_MEASUREMENT,
     STATE_UNAVAILABLE,
@@ -66,6 +66,7 @@ class Source:
     field: str
     entity_id: str
     aggregate: str
+    unit: str | None = None
 
     @property
     def kind(self) -> str:
@@ -203,7 +204,7 @@ async def async_build_from_states(
 
     series: dict[Source, _Series] = {}
     for source in sources:
-        unit = _unit(hass, source.entity_id)
+        unit = _unit(hass, source.entity_id) or source.unit
         points: list[tuple[float, float | None]] = []
         for state in states.get(source.entity_id, []):
             value: float | None = None
@@ -251,6 +252,12 @@ async def async_build_from_statistics(
         STATISTICS_UNITS,
         {"change", "mean", "state"},
     )
+    # Statistics with a recorded unit have already been converted by the recorder.
+    # Apply the explicit fallback only to statistics whose metadata has no unit.
+    overrides = {s.entity_id for s in sources if s.unit}
+    metadata = await get_instance(hass).async_add_executor_job(
+        partial(get_metadata, hass, statistic_ids=overrides)
+    ) if overrides else {}
     hours: dict[int, dict[str, float | None]] = {}
     for source in sources:
         for row in stats.get(source.entity_id, []):
@@ -268,6 +275,9 @@ async def async_build_from_statistics(
                 if value is None:
                     value = row.get("mean")
             if value is not None:
+                meta = metadata.get(source.entity_id)
+                if source.unit and meta and not meta[1].get("unit_of_measurement"):
+                    value = _convert(value, source.kind, source.unit)
                 hours.setdefault(int(begin) + 3600, {})[source.field] = value
     return sorted(hours.items())
 

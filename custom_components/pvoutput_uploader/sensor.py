@@ -14,6 +14,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.const import (
+    ATTR_UNIT_OF_MEASUREMENT,
     EntityCategory,
     UnitOfElectricPotential,
     UnitOfPower,
@@ -32,6 +33,7 @@ from .const import (
     KIND_POWER,
     KIND_TEMPERATURE,
     KIND_VOLTAGE,
+    upload_unit,
 )
 from .coordinator import PVOutputConfigEntry, PVOutputCoordinator
 from .entity import PVOutputEntity
@@ -213,8 +215,22 @@ class FieldSensor(PVOutputEntity, SensorEntity):
         return "mdi:upload" if self._configured_to_send else "mdi:upload-off"
 
     @property
+    def _upload_unit(self) -> str | None:
+        m = self.mapping
+        state = self.hass.states.get(m.entity_id) if m.entity_id else None
+        unit = state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) if state else None
+        return upload_unit(m.field, m.aggregate, unit or m.unit)
+
+    @property
     def native_value(self) -> str:
-        """Return a readable source name, or the fixed value."""
+        """Return a readable source name or fixed value, with the upload unit."""
+        value = self._source_label
+        unit = self._upload_unit
+        return f"{value[:255 - len(unit) - 1]} {unit}" if unit else value[:255]
+
+    @property
+    def _source_label(self) -> str:
+        """The selected source friendly name, or the fixed number."""
         if entity_id := self.mapping.entity_id:
             if (state := self.hass.states.get(entity_id)) is not None:
                 return state.name[:255]
@@ -238,11 +254,16 @@ class FieldSensor(PVOutputEntity, SensorEntity):
             "source": "sensor" if m.entity_id else "fixed value",
             "active": m.active,
             "configured_to_send": self._configured_to_send,
+            "pvoutput_unit": self._upload_unit,
         }
         if m.active and not self._configured_to_send:
             attrs["not_configured_to_send_because"] = "needs a PVOutput donor account"
         if m.entity_id:
             attrs["source_entity"] = m.entity_id
+            state = self.hass.states.get(m.entity_id)
+            attrs["source_unit"] = (
+                state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) if state else None
+            ) or m.unit
             if (state := self.hass.states.get(m.entity_id)) is not None:
                 attrs["source_name"] = state.name
             attrs["value_per_interval"] = m.aggregate

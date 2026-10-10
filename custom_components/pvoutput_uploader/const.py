@@ -26,6 +26,8 @@ MAP_CONSTANT: Final = "constant"
 MAP_NAME: Final = "name"
 MAP_ACTIVE: Final = "active"
 MAP_AGGREGATE: Final = "aggregate"
+# Fallback when a sensor does not report a unit; display unit for raw constants.
+MAP_UNIT: Final = "source_unit"
 
 DONOR_AUTO: Final = "auto"
 DONOR_YES: Final = "donor"
@@ -128,3 +130,22 @@ RATE_RESERVE: Final = 2
 # while another uploader such as IoTaWatt has not created it yet) is retried in
 # later cycles for this long before it counts as rejected.
 UNCONFIRMED_RETRY_SECONDS: Final = 2 * 3600
+
+
+PVOUTPUT_UNITS: Final = {
+    KIND_ENERGY: "Wh",
+    KIND_POWER: "W",
+    KIND_TEMPERATURE: "°C",
+    KIND_VOLTAGE: "V",
+}
+
+
+def upload_unit(field: str, aggregate: str | None = None, source_unit: str | None = None) -> str | None:
+    """PVOutput unit; extended fields keep their user-defined unit."""
+    if aggregate == AGG_ENERGY_TODAY:
+        return "Wh"
+    if field == "b2":
+        return "%"
+    if field == "b6":
+        return None
+    return PVOUTPUT_UNITS.get(FIELDS_BY_KEY[field].kind, source_unit)

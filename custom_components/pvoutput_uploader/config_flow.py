@@ -65,6 +65,8 @@ from .const import (
     MAP_ENTITY,
     MAP_FIELD,
     MAP_NAME,
+    MAP_UNIT,
+    upload_unit,
     UPLOAD_INTERVALS,
 )
 from .services import (
@@ -174,7 +176,9 @@ class PVOutputUploaderOptionsFlow(OptionsFlow):
 
     def _field_options(self, keys: list[str]) -> list[SelectOptionDict]:
         return [
-            SelectOptionDict(value=k, label=f"{k} · {FIELDS_BY_KEY[k].name}")
+            SelectOptionDict(value=k, label=f"{k} · {FIELDS_BY_KEY[k].name}" + (
+                f" ({upload_unit(k)})" if upload_unit(k) else ""
+            ))
             for k in keys
         ]
 
@@ -202,6 +206,9 @@ class PVOutputUploaderOptionsFlow(OptionsFlow):
                 source = f"`{m[MAP_ENTITY]}`, {m.get(MAP_AGGREGATE) or field.default_aggregate}"
             else:
                 source = f"constant {m.get(MAP_CONSTANT)}"
+            unit = upload_unit(field.key, m.get(MAP_AGGREGATE), m.get(MAP_UNIT))
+            if unit:
+                source += f" {unit}"
             state = "active" if m.get(MAP_ACTIVE, True) else "passive"
             if field.donor and not donor:
                 state += ", needs a donor account so not sent"
@@ -210,11 +217,13 @@ class PVOutputUploaderOptionsFlow(OptionsFlow):
             )
         return "\n".join(lines) or "_No fields yet. Start with **Add field**._"
 
-    def _unit_error(self, field: str, entity_id: str, aggregate: str) -> str | None:
+    def _unit_error(self, field: str, entity_id: str, aggregate: str, fallback: str | None = None) -> str | None:
         """Return an error key if the sensor's unit does not fit the field."""
         kind = KIND_ENERGY if aggregate == AGG_ENERGY_TODAY else FIELDS_BY_KEY[field].kind
         state = self.hass.states.get(entity_id)
-        unit = state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) if state else None
+        unit = (state.attributes.get(ATTR_UNIT_OF_MEASUREMENT) if state else None) or fallback
+        if not unit and kind != "raw":
+            return "unit_required"
         return None if unit_supported(kind, unit) else "unit_mismatch"
 
     def _details_schema(self, field: str, has_entity: bool) -> dict[Any, Any]:
@@ -224,6 +233,8 @@ class PVOutputUploaderOptionsFlow(OptionsFlow):
             vol.Required(MAP_NAME): TextSelector(),
             vol.Required(MAP_ACTIVE): BooleanSelector(),
         }
+        if has_entity or fdef.kind == "raw":
+            schema[vol.Optional(MAP_UNIT)] = TextSelector()
         if has_entity and len(fdef.aggregates) > 1:
             schema[vol.Required(MAP_AGGREGATE)] = SelectSelector(
                 SelectSelectorConfig(
@@ -282,7 +293,7 @@ class PVOutputUploaderOptionsFlow(OptionsFlow):
             field = user_input[MAP_FIELD]
             entity_id = user_input[MAP_ENTITY]
             # Extended fields start as "average"; energy since midnight is checked later.
-            if error := self._unit_error(field, entity_id, FIELDS_BY_KEY[field].default_aggregate):
+            if (error := self._unit_error(field, entity_id, FIELDS_BY_KEY[field].default_aggregate)) == "unit_mismatch":
                 errors["base"] = error
             else:
                 self._new = {MAP_FIELD: field, MAP_ENTITY: entity_id, MAP_CONSTANT: None}
@@ -310,7 +321,7 @@ class PVOutputUploaderOptionsFlow(OptionsFlow):
         errors: dict[str, str] = {}
         if user_input is not None:
             aggregate = user_input.get(MAP_AGGREGATE, fdef.default_aggregate)
-            if error := self._unit_error(field, self._new[MAP_ENTITY], aggregate):
+            if error := self._unit_error(field, self._new[MAP_ENTITY], aggregate, user_input.get(MAP_UNIT, "").strip() or None):
                 errors["base"] = error
             else:
                 self._fields.append(
@@ -321,6 +332,8 @@ class PVOutputUploaderOptionsFlow(OptionsFlow):
                         MAP_AGGREGATE: aggregate,
                     }
                 )
+                if unit := user_input.get(MAP_UNIT, "").strip():
+                    self._fields[-1][MAP_UNIT] = unit
                 return self._save()
         defaults = user_input or {
             MAP_NAME: fdef.name,
@@ -355,6 +368,8 @@ class PVOutputUploaderOptionsFlow(OptionsFlow):
                     MAP_AGGREGATE: FIELDS_BY_KEY[field].default_aggregate,
                 }
             )
+            if unit := user_input.get(MAP_UNIT, "").strip():
+                self._fields[-1][MAP_UNIT] = unit
             return self._save()
         schema = vol.Schema(
             {
@@ -363,6 +378,7 @@ class PVOutputUploaderOptionsFlow(OptionsFlow):
                 ),
                 vol.Required(MAP_CONSTANT): CONSTANT_SELECTOR,
                 vol.Optional(MAP_NAME): TextSelector(),
+                vol.Optional(MAP_UNIT): TextSelector(),
                 vol.Required(MAP_ACTIVE, default=True): BooleanSelector(),
             }
         )
@@ -403,7 +419,7 @@ class PVOutputUploaderOptionsFlow(OptionsFlow):
                 MAP_AGGREGATE, mapping.get(MAP_AGGREGATE) or fdef.default_aggregate
             )
             if is_sensor and (
-                error := self._unit_error(field, user_input[MAP_ENTITY], aggregate)
+                error := self._unit_error(field, user_input[MAP_ENTITY], aggregate, user_input.get(MAP_UNIT, "").strip() or None)
             ):
                 errors["base"] = error
             else:
@@ -414,6 +430,10 @@ class PVOutputUploaderOptionsFlow(OptionsFlow):
                         MAP_AGGREGATE: aggregate,
                     }
                 )
+                if unit := user_input.get(MAP_UNIT, "").strip():
+                    mapping[MAP_UNIT] = unit
+                else:
+                    mapping.pop(MAP_UNIT, None)
                 if is_sensor:
                     mapping[MAP_ENTITY] = user_input[MAP_ENTITY]
                 else:
@@ -422,7 +442,10 @@ class PVOutputUploaderOptionsFlow(OptionsFlow):
         source: dict[Any, Any] = (
             {vol.Required(MAP_ENTITY): ENTITY_SELECTOR}
             if is_sensor
-            else {vol.Required(MAP_CONSTANT): CONSTANT_SELECTOR}
+            else {vol.Required(MAP_CONSTANT): NumberSelector(
+                NumberSelectorConfig(mode=NumberSelectorMode.BOX, step="any",
+                                     unit_of_measurement=upload_unit(field))
+            )}
         )
         schema = vol.Schema(source | self._details_schema(field, is_sensor))
         defaults = user_input or {

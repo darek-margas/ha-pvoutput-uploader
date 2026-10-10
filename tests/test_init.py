@@ -253,7 +253,8 @@ async def test_field_sensors(recorder_mock, hass: HomeAssistant, entry: MockConf
         await _setup(hass, entry)
 
     v5 = hass.states.get("sensor.my_system_v5_ambient")
-    assert v5.state == "Outside"
+    assert v5.state == "Outside °C"
+    assert v5.attributes["pvoutput_unit"] == "°C"
     assert v5.attributes["pvoutput_field"] == "v5"
     assert v5.attributes["pvoutput_field_name"] == "Temperature"
     assert v5.attributes["source"] == "sensor"
@@ -263,7 +264,8 @@ async def test_field_sensors(recorder_mock, hass: HomeAssistant, entry: MockConf
     assert v5.attributes["configured_to_send"] is True
 
     b3 = hass.states.get("sensor.my_system_b3_battery_size")
-    assert b3.state == "5544"
+    assert b3.state == "5544 Wh"
+    assert b3.attributes["pvoutput_unit"] == "Wh"
     assert b3.attributes["source"] == "fixed value"
     # A battery field on a standard account is kept but not sent.
     assert b3.attributes["configured_to_send"] is False

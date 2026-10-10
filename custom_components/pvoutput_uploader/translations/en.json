@@ -58,16 +58,18 @@
       },
       "sensor_details": {
         "title": "{field}",
-        "description": "From `{entity}`.",
+        "description": "From `{entity}`. The upload unit is shown in the field selector.",
         "data": {
           "name": "Name in PVOutput",
           "active": "Active",
-          "aggregate": "Value sent for each interval"
+          "aggregate": "Value sent for each interval",
+          "source_unit": "Source / custom unit"
         },
         "data_description": {
           "name": "For your reference; use the label the field has in PVOutput.",
           "active": "Off (passive): recorded in the history log but not sent. Make it active later and reupload to send its history.",
-          "aggregate": "How the 5 minute values of an interval are combined. Energy since midnight needs an energy sensor (Wh/kWh); lifetime and daily counters both work."
+          "aggregate": "How the 5 minute values of an interval are combined. Energy since midnight needs an energy sensor (Wh/kWh); lifetime and daily counters both work.",
+          "source_unit": "For sensors without a unit, enter the actual source unit (e.g. kW, kWh, °C or °F). A sensor's reported unit takes precedence. Fixed values use PVOutput's unit; this sets the unit only for user-defined extended fields."
         }
       },
       "add_constant": {
@@ -77,12 +79,14 @@
           "field": "PVOutput field",
           "constant": "Value",
           "name": "Name in PVOutput",
-          "active": "Active"
+          "active": "Active",
+          "source_unit": "Source / custom unit"
         },
         "data_description": {
           "constant": "In PVOutput's unit for the field, e.g. Wh for battery size.",
           "name": "Optional; defaults to PVOutput's name for the field.",
-          "active": "Off: kept in the configuration but not sent."
+          "active": "Off: kept in the configuration but not sent.",
+          "source_unit": "For sensors without a unit, enter the actual source unit (e.g. kW, kWh, °C or °F). A sensor's reported unit takes precedence. Fixed values use PVOutput's unit; this sets the unit only for user-defined extended fields."
         }
       },
       "edit_field": {
@@ -99,11 +103,13 @@
           "constant": "Value",
           "name": "Name in PVOutput",
           "active": "Active",
-          "aggregate": "Value sent for each interval"
+          "aggregate": "Value sent for each interval",
+          "source_unit": "Source / custom unit"
         },
         "data_description": {
           "active": "Off (passive): recorded but not sent.",
-          "aggregate": "How the 5 minute values of an interval are combined."
+          "aggregate": "How the 5 minute values of an interval are combined.",
+          "source_unit": "For sensors without a unit, enter the actual source unit (e.g. kW, kWh, °C or °F). A sensor's reported unit takes precedence. Fixed values use PVOutput's unit; this sets the unit only for user-defined extended fields."
         }
       },
       "remove_field": {
@@ -164,7 +170,8 @@
       "unit_mismatch": "The sensor's unit does not fit this field.",
       "end_before_start": "The end must be after the start.",
       "nothing_unsent": "Everything recorded has been sent. Choose a date and time instead.",
-      "start_required": "Enter the date and time to start from."
+      "start_required": "Enter the date and time to start from.",
+      "unit_required": "This sensor has no unit. Enter its source unit before saving."
     },
     "abort": {
       "not_loaded": "The integration is not running. Check that it has started, then try again.",
@@ -203,24 +210,51 @@
   },
   "entity": {
     "sensor": {
-      "last_upload": { "name": "Last upload" },
-      "pending_samples": { "name": "Samples waiting" },
-      "queued_outputs": { "name": "Daily outputs waiting" },
-      "failed_samples": { "name": "Rejected samples" },
-      "failed_outputs": { "name": "Rejected daily outputs" },
-      "partial_samples": { "name": "Partly sent samples" },
-      "history_samples": { "name": "History samples" },
-      "history_oldest": { "name": "History start" },
-      "rate_limit_remaining": { "name": "Requests left this hour" },
-      "paused_until": { "name": "Rate limit pause until" },
+      "last_upload": {
+        "name": "Last upload"
+      },
+      "pending_samples": {
+        "name": "Samples waiting"
+      },
+      "queued_outputs": {
+        "name": "Daily outputs waiting"
+      },
+      "failed_samples": {
+        "name": "Rejected samples"
+      },
+      "failed_outputs": {
+        "name": "Rejected daily outputs"
+      },
+      "partial_samples": {
+        "name": "Partly sent samples"
+      },
+      "history_samples": {
+        "name": "History samples"
+      },
+      "history_oldest": {
+        "name": "History start"
+      },
+      "rate_limit_remaining": {
+        "name": "Requests left this hour"
+      },
+      "paused_until": {
+        "name": "Rate limit pause until"
+      },
       "account_type": {
         "name": "Account type",
-        "state": { "donor": "Donor", "standard": "Standard" }
+        "state": {
+          "donor": "Donor",
+          "standard": "Standard"
+        }
       },
-      "last_error": { "name": "Last error" }
+      "last_error": {
+        "name": "Last error"
+      }
     },
     "switch": {
-      "uploading": { "name": "Uploading" }
+      "uploading": {
+        "name": "Uploading"
+      }
     }
   },
   "exceptions": {
@@ -239,22 +273,52 @@
       "name": "Reupload history",
       "description": "Sends recorded history again. Days inside PVOutput's status window (14 days, 90 for donors) are sent as statuses, older days as daily outputs. Also available under Configure.",
       "fields": {
-        "config_entry_id": { "name": "PVOutput system", "description": "Needed only when more than one system is set up." },
-        "since_failure": { "name": "Since first unsent", "description": "Start at the oldest status not confirmed by PVOutput (waiting, rejected or too old). Replaces the start." },
-        "start": { "name": "Start", "description": "Date, or date and time, to send from." },
-        "end": { "name": "End date", "description": "Last day to send. Defaults to today." },
-        "method": { "name": "Method", "description": "How the days are sent." }
+        "config_entry_id": {
+          "name": "PVOutput system",
+          "description": "Needed only when more than one system is set up."
+        },
+        "since_failure": {
+          "name": "Since first unsent",
+          "description": "Start at the oldest status not confirmed by PVOutput (waiting, rejected or too old). Replaces the start."
+        },
+        "start": {
+          "name": "Start",
+          "description": "Date, or date and time, to send from."
+        },
+        "end": {
+          "name": "End date",
+          "description": "Last day to send. Defaults to today."
+        },
+        "method": {
+          "name": "Method",
+          "description": "How the days are sent."
+        }
       }
     },
     "import_from_recorder": {
       "name": "Import from recorder",
       "description": "Fills the history log from Home Assistant's recorded states, and from hourly long term statistics where states have been purged. Also available under Configure.",
       "fields": {
-        "config_entry_id": { "name": "PVOutput system", "description": "Needed only when more than one system is set up." },
-        "start": { "name": "Start", "description": "Start of the period to import." },
-        "end": { "name": "End", "description": "End of the period. Defaults to now." },
-        "overwrite": { "name": "Overwrite", "description": "Replace samples already in the log with values from recorded states." },
-        "upload": { "name": "Upload", "description": "Send the imported samples to PVOutput. Off keeps them in the log only." }
+        "config_entry_id": {
+          "name": "PVOutput system",
+          "description": "Needed only when more than one system is set up."
+        },
+        "start": {
+          "name": "Start",
+          "description": "Start of the period to import."
+        },
+        "end": {
+          "name": "End",
+          "description": "End of the period. Defaults to now."
+        },
+        "overwrite": {
+          "name": "Overwrite",
+          "description": "Replace samples already in the log with values from recorded states."
+        },
+        "upload": {
+          "name": "Upload",
+          "description": "Send the imported samples to PVOutput. Off keeps them in the log only."
+        }
       }
     }
   }

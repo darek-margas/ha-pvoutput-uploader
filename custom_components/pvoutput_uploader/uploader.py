@@ -53,6 +53,7 @@ from .const import (
     MAP_ENTITY,
     MAP_FIELD,
     MAP_NAME,
+    MAP_UNIT,
     MAX_CHUNKS_PER_CYCLE,
     MAX_REQUESTS_PER_CYCLE,
     UNCONFIRMED_RETRY_SECONDS,
@@ -98,6 +99,7 @@ class FieldMapping:
     name: str
     active: bool
     aggregate: str
+    unit: str | None = None
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> FieldMapping:
@@ -110,6 +112,7 @@ class FieldMapping:
             name=data.get(MAP_NAME) or field.name,
             active=data.get(MAP_ACTIVE, True),
             aggregate=data.get(MAP_AGGREGATE) or field.default_aggregate,
+            unit=data.get(MAP_UNIT) or None,
         )
 
     @property
@@ -168,7 +171,7 @@ class Uploader:
         options = entry.options
         self.mappings = [FieldMapping.from_dict(m) for m in options.get(CONF_FIELDS, [])]
         self.sources = [
-            Source(m.field, m.entity_id, m.aggregate)
+            Source(m.field, m.entity_id, m.aggregate, m.unit)
             for m in self.mappings
             if m.entity_id
         ]

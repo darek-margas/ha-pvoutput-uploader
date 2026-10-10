@@ -222,3 +222,29 @@ async def test_build_from_statistics(hass: HomeAssistant) -> None:
         (hour + 3600, {"v1": 500.0, "v2": 250.0, "v4": 300.0}),
         (hour + 7200, {"v2": 100.0, "v4": 100.0}),
     ]
+
+
+async def test_unitless_source_uses_configured_unit(hass: HomeAssistant) -> None:
+    hass.states.async_set("sensor.unitless", "68")
+    t0 = 1_800_000_000 - 1_800_000_000 % 300
+    recorded = {"sensor.unitless": [_state("sensor.unitless", "68", t0 + 60)]}
+    with (
+        patch.object(builder, "get_instance", return_value=_FakeRecorder(hass)),
+        patch.object(builder.history, "get_significant_states", return_value=recorded),
+    ):
+        samples = await async_build_from_states(hass, [Source("v5", "sensor.unitless", AGG_LAST, "°F")], t0, t0 + 300)
+    assert samples[0].values["v5"] == pytest.approx(20.0)
+
+
+async def test_unitless_statistics_use_fallback_without_double_conversion(hass: HomeAssistant) -> None:
+    hour = 1_800_000_000 - 1_800_000_000 % 3600
+    sources = [Source("v2", "sensor.no_unit", AGG_AVERAGE, "kW"), Source("v4", "sensor.with_unit", AGG_AVERAGE, "kW")]
+    stats = {s.entity_id: [{"start": float(hour), "mean": 2.0 if s.entity_id == "sensor.no_unit" else 2000.0}] for s in sources}
+    metadata = {"sensor.no_unit": (1, {"unit_of_measurement": None}), "sensor.with_unit": (2, {"unit_of_measurement": "kW"})}
+    with (
+        patch.object(builder, "get_instance", return_value=_FakeRecorder(hass)),
+        patch.object(builder, "statistics_during_period", return_value=stats),
+        patch.object(builder, "get_metadata", return_value=metadata),
+    ):
+        hours = await async_build_from_statistics(hass, sources, dt_util.utc_from_timestamp(hour), dt_util.utc_from_timestamp(hour + 3600))
+    assert hours == [(hour + 3600, {"v2": 2000.0, "v4": 2000.0})]

@@ -263,3 +263,9 @@ Home Assistant 2026.3+ shows them in place of the brands repository.
 ## License
 
 [GNU General Public License v3.0](LICENSE).
+
+### Field units
+
+Field rows show the source friendly name and the unit sent to PVOutput, e.g. `Outside °C`. Fixed values show their unit, e.g. `5544 Wh` for battery size. Power uses W, energy Wh, voltage V and battery state of charge %; extended fields use your chosen unit.
+
+Sensors with a unit are converted automatically. For a sensor without one, enter its actual **Source / custom unit** when adding or editing the field (e.g. kW or °F); this is used for conversion, not just a label. Leave it empty when the source reports its unit. Fixed values are entered in PVOutput units; a custom unit applies only to extended fields. Changing a unit affects newly recorded or explicitly rebuilt history; existing samples keep their recorded values.
