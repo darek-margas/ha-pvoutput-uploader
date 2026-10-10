@@ -226,6 +226,13 @@ class PVOutputUploaderOptionsFlow(OptionsFlow):
             return "unit_required"
         return None if unit_supported(kind, unit) else "unit_mismatch"
 
+    def _constant_selector(self, field: str) -> NumberSelector:
+        """Label fixed values with the known PVOutput unit."""
+        config = NumberSelectorConfig(mode=NumberSelectorMode.BOX, step="any")
+        if unit := upload_unit(field):
+            config["unit_of_measurement"] = unit
+        return NumberSelector(config)
+
     def _details_schema(self, field: str, has_entity: bool) -> dict[Any, Any]:
         """Name, active flag and, for sensors, how values are combined."""
         fdef = FIELDS_BY_KEY[field]
@@ -442,10 +449,7 @@ class PVOutputUploaderOptionsFlow(OptionsFlow):
         source: dict[Any, Any] = (
             {vol.Required(MAP_ENTITY): ENTITY_SELECTOR}
             if is_sensor
-            else {vol.Required(MAP_CONSTANT): NumberSelector(
-                NumberSelectorConfig(mode=NumberSelectorMode.BOX, step="any",
-                                     unit_of_measurement=upload_unit(field))
-            )}
+            else {vol.Required(MAP_CONSTANT): self._constant_selector(field)}
         )
         schema = vol.Schema(source | self._details_schema(field, is_sensor))
         defaults = user_input or {

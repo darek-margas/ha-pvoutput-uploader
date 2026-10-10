@@ -313,3 +313,14 @@ async def test_unitless_sensor_requires_explicit_unit(recorder_mock, hass: HomeA
     result = await _configure(hass, result, details | {"source_unit": "°F"})
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert entry.options[CONF_FIELDS][0]["source_unit"] == "°F"
+
+
+async def test_edit_extended_constant_custom_unit(recorder_mock, hass: HomeAssistant) -> None:
+    mapping = {"field": "v10", "constant": 2, "name": "Custom", "active": True, "aggregate": "average", "source_unit": "kWh"}
+    entry = options_entry(hass, donor=True, fields=[mapping])
+    result = await _choose(hass, await _menu(hass, entry), "edit_field")
+    result = await _configure(hass, result, {"field": "v10"})
+    assert result["step_id"] == "edit_details"
+    result = await _configure(hass, result, {"constant": 3, "name": "Custom", "active": True, "source_unit": "Wh"})
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert entry.options[CONF_FIELDS][0]["source_unit"] == "Wh"
