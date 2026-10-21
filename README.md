@@ -2,6 +2,8 @@
 
 # PVOutput Uploader for Home Assistant
 
+[![HACS Default](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://hacs.xyz)
+
 Send your Home Assistant solar, consumption, battery and other numeric sensor readings
 to [PVOutput](https://pvoutput.org), with local recording and automatic upload recovery.
 Fields can also be read back from PVOutput into sensors (download), per field, and
@@ -9,8 +11,10 @@ PVOutput's history is kept as hourly Home Assistant statistics.
 
 ## Quick start
 
-1. Add this repository to HACS as a custom repository (type *Integration*), install
-   **PVOutput Uploader** and restart Home Assistant.
+1. In HACS, search for **PVOutput Uploader**, download it and restart Home Assistant.
+   Or open it in HACS directly:
+
+   [![Open in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=darek-margas&repository=ha-pvoutput-uploader&category=integration)
 2. **Settings → Devices & services → Add integration → PVOutput Uploader**, enter the API
    key and system ID from pvoutput.org (*Settings → API Settings*). The status interval
    and donor status are read from your account. Use **Add PV Site** to add another system.
