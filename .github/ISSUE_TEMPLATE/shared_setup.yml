@@ -1,0 +1,53 @@
+name: Share a setup
+description: Share the field mappings for your inverter or battery integration, for others to import.
+title: "Setup: <integration> (<variant>)"
+labels: ["shared setup"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for sharing. Paste what **Configure → Export configuration** shows; it never contains your API key or system ID.
+        The setup will be added to [`setups/`](https://github.com/darek-margas/ha-pvoutput-uploader/tree/main/setups) and the wiki's [Shared setups](https://github.com/darek-margas/ha-pvoutput-uploader/wiki/Shared-setups) page.
+  - type: input
+    id: integration
+    attributes:
+      label: Integration
+      description: The Home Assistant integration your sensors come from, with a link.
+      placeholder: "Sigenergy Local Modbus (https://github.com/TypQxQ/Sigenergy-Local-Modbus)"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Integration version
+      placeholder: "1.2.3"
+    validations:
+      required: true
+  - type: input
+    id: hardware
+    attributes:
+      label: Hardware
+      description: Inverter, battery or meter models it was used with.
+      placeholder: "Sigenergy SigenStor 10 kWh, hybrid inverter 6 kW"
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: Exported configuration
+      description: From Configure → Export configuration. Please leave out `settings:` unless they matter for the setup, and sensors from your own automations or helpers (or say so in the notes).
+      render: yaml
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Anything others should know, e.g. sensors to enable in the integration, units, fields that need a PVOutput donor account.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I have used this setup myself and PVOutput receives the expected values.
+          required: true

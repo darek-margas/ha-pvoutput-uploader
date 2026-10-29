@@ -18,8 +18,14 @@ Check the result on the device page: each field sensor shows its source and unit
 
 ## Adding one
 
-1. Set up the fields on your site, then **Configure → Export configuration** and copy
-   the YAML.
+The easy way: set up the fields on your site, **Configure → Export configuration**, and
+paste the YAML into a **[Share a setup](https://github.com/darek-margas/ha-pvoutput-uploader/issues/new?template=shared_setup.yml)**
+issue. The form asks for the integration, its version and your hardware; the setup is
+then added here. No fork or pull request needed.
+
+Or, with a pull request:
+
+1. Export the configuration as above.
 2. Save it here as `<integration>-<variant>.yaml`, e.g. `sigenergy-modbus.yaml`,
    `huawei-solar.yaml`, `sungrow-modbus.yaml`.
 3. Put a comment block at the top: which integration (with a link) and its version,

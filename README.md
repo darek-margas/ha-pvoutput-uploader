@@ -496,9 +496,11 @@ installation:
   donor, as when an account stops being one.
 
 **Shared setups.** Ready-made mappings for inverter and battery integrations are in
-[`setups/`](setups/) (submitted by pull request, checked by the tests) and on the
+[`setups/`](setups/) (checked by the tests) and listed on the
 [wiki](https://github.com/darek-margas/ha-pvoutput-uploader/wiki/Shared-setups). To
-share yours, export it and add it to either.
+share yours, export it and paste it into a
+[Share a setup](https://github.com/darek-margas/ha-pvoutput-uploader/issues/new?template=shared_setup.yml)
+issue; no pull request needed.
 
 ## How it works
 
