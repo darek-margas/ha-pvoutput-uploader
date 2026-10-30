@@ -1,0 +1,57 @@
+# Sigenergy SigenStor with the Sigenergy Local Modbus integration (HACS),
+# https://github.com/TypQxQ/Sigenergy-Local-Modbus
+#
+# Shared by Oldtech on the PVOutput forum; live example:
+# https://www.pvoutput.org/intraday.jsp?sid=9778
+#
+# Daily energy counters for v1/v3, and the extended fields (donor account) for
+# battery state of charge and power, grid import and export power, and the
+# battery cell temperature. The inverter temperature is sent twice on purpose:
+# as v5, shown on PVOutput's main page, and as v12 among the extended data.
+# See also sigenergy-modbus.yaml (lifetime counters, battery fields b1-b5).
+pvoutput_uploader: 1
+fields:
+  - field: v1
+    sensor: sensor.sigen_plant_daily_pv_energy_wh
+    name: Energy Generation
+    value_per_interval: energy_today
+  - field: v2
+    sensor: sensor.sigen_plant_pv_power
+    name: Power Generation
+    value_per_interval: average
+  - field: v3
+    sensor: sensor.sigen_plant_daily_load_consumption
+    name: Energy Consumption
+    value_per_interval: energy_today
+  - field: v4
+    sensor: sensor.sigen_plant_consumed_power
+    name: Power Consumption
+    value_per_interval: average
+  - field: v5
+    sensor: sensor.sigen_inverter_pcs_internal_temperature
+    name: Inverter temperature
+    value_per_interval: average
+  - field: v7
+    sensor: sensor.sigen_plant_battery_state_of_charge
+    name: Battery state of charge
+    value_per_interval: average
+  - field: v8
+    sensor: sensor.sigen_plant_battery_power
+    name: Battery power
+    value_per_interval: average
+  - field: v9
+    sensor: sensor.sigen_plant_grid_import_power
+    name: Grid import power
+    value_per_interval: average
+  - field: v10
+    sensor: sensor.sigen_plant_grid_export_power
+    name: Grid export power
+    value_per_interval: average
+  - field: v11
+    sensor: sensor.sigen_inverter_battery_average_cell_temperature
+    name: Battery cell temperature
+    value_per_interval: average
+  - field: v12
+    sensor: sensor.sigen_inverter_pcs_internal_temperature
+    name: Inverter temperature
+    value_per_interval: average
