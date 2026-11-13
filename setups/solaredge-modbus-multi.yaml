@@ -1,0 +1,36 @@
+# SolarEdge inverter with the SolarEdge Modbus Multi integration (HACS),
+# https://github.com/WillCodeForCats/solaredge-modbus-multi
+#
+# Shared by savoy on the PVOutput forum, after SolarEdge's cloud API stopped working.
+# i1 is the first inverter and i1_m1 its first meter, as the integration names them.
+#
+# v3 and v4 are NOT from the integration: savoy calculates household consumption
+# (energy and power) from generation, grid import/export and battery with their
+# own template or helper sensors. Make your own, or leave them empty on the
+# import's sensor screen to skip those two fields.
+pvoutput_uploader: 1
+fields:
+  - field: v1
+    sensor: sensor.solaredge_i1_ac_energy
+    name: Energy Generation
+    value_per_interval: energy_today
+  - field: v2
+    sensor: sensor.solaredge_i1_ac_power
+    name: Power Generation
+    value_per_interval: average
+  - field: v3
+    sensor: sensor.solaredge_household_consumption_energy_total
+    name: Energy Consumption
+    value_per_interval: energy_today
+  - field: v4
+    sensor: sensor.power_consumption
+    name: Power Consumption
+    value_per_interval: average
+  - field: v5
+    sensor: sensor.solaredge_i1_temperature
+    name: Temperature
+    value_per_interval: average
+  - field: v6
+    sensor: sensor.solaredge_i1_m1_ac_voltage_an
+    name: Voltage
+    value_per_interval: average

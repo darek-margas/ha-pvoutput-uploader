@@ -401,7 +401,7 @@ class Uploader:
         # Each energy counter's last value, carried from one read to the next so
         # no increment across a read boundary is lost (see the builder).
         raw = await self._run(self.store.get_meta, META_ENERGY_BASELINES)
-        baselines: dict[str, float] = json.loads(raw) if raw else {}
+        baselines: dict[str, Any] = json.loads(raw) if raw else {}
         for _ in range(MAX_CHUNKS_PER_CYCLE):
             if last >= target:
                 break
@@ -1103,7 +1103,7 @@ class Uploader:
 
             t = start_ts
             # Counters carried across the day boundaries of this import.
-            baselines: dict[str, float] = {}
+            baselines: dict[str, Any] = {}
             while t < end_ts:
                 chunk_end = min(end_ts, t + 86400)
                 samples = await async_build_from_states(

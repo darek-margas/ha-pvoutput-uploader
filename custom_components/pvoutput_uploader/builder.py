@@ -55,8 +55,14 @@ CONVERTERS: dict[str, tuple[type[BaseUnitConverter], str]] = {
 }
 STATISTICS_UNITS = {kind: unit for kind, (_, unit) in CONVERTERS.items()}
 
-# A drop of more than this fraction in an energy counter is a meter reset.
+# A drop of more than this fraction in an energy counter is a meter reset...
 RESET_DROP = 0.9
+# ...unless the counter is back near its old value within this time: then the
+# drop was a bad reading (e.g. a Modbus read giving 0 for one poll), and
+# counting it as a reset would count the climb back as new energy, doubling
+# the day for a daily counter or adding the whole lifetime for a total one.
+GLITCH_SECONDS = 900
+PENDING_SUFFIX = "|pending"
 
 
 @dataclass(frozen=True, slots=True)
@@ -104,24 +110,40 @@ class _Series:
         points: list[tuple[float, float | None]],
         energy: bool,
         baseline: float | None = None,
+        pending: tuple[float, float] | None = None,
     ) -> None:
         self.ts = [p[0] for p in points]
         self.vals = [p[1] for p in points]
         # For counters, a running total that ignores resets and small dips,
         # counted from ``baseline`` (the last value seen before) when given.
         self.acc: list[float | None] = []
+        # A drop not yet known to be a reset: (value before it, time of it).
+        self.pending = pending
         if energy:
             total = 0.0
             prev: float | None = baseline
-            for v in self.vals:
+            for t, v in zip(self.ts, self.vals, strict=True):
                 if v is not None:
                     if prev is None:
+                        prev = v
+                    elif self.pending is not None:
+                        before, since = self.pending
+                        if t - since <= GLITCH_SECONDS and v >= before * RESET_DROP:
+                            # Back near the old value: the drop was a bad
+                            # reading. Count only what came on top of it.
+                            total += max(v - before, 0.0)
+                            self.pending = None
+                        elif t - since > GLITCH_SECONDS:
+                            # Stayed down: a real reset, counting from zero.
+                            total += v
+                            self.pending = None
                         prev = v
                     elif v >= prev:
                         total += v - prev
                         prev = v
                     elif v < prev * RESET_DROP:
-                        total += v
+                        # Counted once it is clear whether it holds.
+                        self.pending = (prev, t)
                         prev = v
                 self.acc.append(total if prev is not None else None)
 
@@ -201,7 +223,7 @@ async def async_build_from_states(
     sources: list[Source],
     start: int,
     end: int,
-    baselines: dict[str, float] | None = None,
+    baselines: dict[str, Any] | None = None,
 ) -> list[Sample]:
     """Build samples for the 5 minute slots ending in (start, end].
 
@@ -250,12 +272,12 @@ async def async_build_from_states(
         # Without it (purged history, a long outage) the old value could put
         # days of counting into one slot.
         known_at_start = bool(points) and points[0][0] == float(start)
-        baseline = (
-            baselines.get(baseline_key(source))
-            if energy and baselines and known_at_start
-            else None
+        carried = energy and baselines and known_at_start
+        baseline = baselines.get(baseline_key(source)) if carried else None
+        pending = baselines.get(baseline_key(source) + PENDING_SUFFIX) if carried else None
+        series[source] = _Series(
+            points, energy, baseline, tuple(pending) if pending else None
         )
-        series[source] = _Series(points, energy, baseline)
 
     # Energy counted from the carried-over value up to the value in force at
     # ``start``: it belongs to the first slot.
@@ -285,8 +307,15 @@ async def async_build_from_states(
         samples.append(Sample(b, values, PENDING))
     if baselines is not None:
         for source, s in series.items():
-            if source.aggregate == AGG_ENERGY_TODAY and (v := s.last_value()) is not None:
+            if source.aggregate != AGG_ENERGY_TODAY:
+                continue
+            if (v := s.last_value()) is not None:
                 baselines[baseline_key(source)] = v
+            # A drop not yet decided (bad reading or reset) carries over too.
+            if s.pending is not None:
+                baselines[baseline_key(source) + PENDING_SUFFIX] = list(s.pending)
+            else:
+                baselines.pop(baseline_key(source) + PENDING_SUFFIX, None)
     return samples
 
 

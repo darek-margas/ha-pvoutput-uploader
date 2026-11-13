@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.10b1
+
+- **Fix: a bad counter reading could double the day's energy.** A drop of more than 10% in an energy counter was taken as a reset at once, so a counter that read 0 (or another wrong low value) for one poll and then came back had its climb back counted as new energy: the day doubled for a daily counter, and a lifetime counter would have added its whole total. A drop now counts as a reset only if the counter stays down; back near its old value within 15 minutes, it was a bad reading and only the real increase is counted. This also holds when the bad reading falls on a boundary between two reads of the recorder. Reported on the PVOutput forum (Sigenergy Local Modbus).
+- **Shared setups:** SolarEdge Modbus Multi (from savoy); the extended Sigenergy setup now uses the inverter's lifetime PV counter for v1, as its author changed it.
+
 ## 0.1.9
 
 Stable release of the 0.1.9 betas (b1-b3): an energy fix, and export and import of the configuration.

@@ -520,6 +520,11 @@ issue; no pull request needed.
   the recorder to the next (and kept across restarts), so an increment is never lost
   at a read boundary: not when the counter was unavailable there, nor when a state
   reached the recorder late.
+- **Counter resets and bad readings.** An energy counter that drops by more than 10%
+  has been reset (a daily counter at midnight) or gave a bad reading (e.g. 0 for one
+  Modbus poll). If it is back near its old value within 15 minutes, the drop was a bad
+  reading and only the real increase is counted; if it stays down, it was a reset and
+  everything counted since is new energy. Daily and lifetime counters both work.
 - **Rate limit.** The `X-Rate-Limit-*` headers of every answer are tracked, and the last
   5 requests of each hour are kept in hand: the limit belongs to the API key, so other
   uploaders using the same key (e.g. IoTaWatt) still have room. Current statuses (the last

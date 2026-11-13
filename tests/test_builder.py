@@ -74,9 +74,25 @@ def test_delta_counts_increase() -> None:
 
 
 def test_delta_handles_meter_reset() -> None:
-    # A daily counter drops to almost zero at midnight: the new value is new energy.
-    s = series([(0, 5000.0), (100, 5010.0), (200, 10.0), (400, 30.0)], energy=True)
+    # A daily counter drops to almost zero at midnight. It stays down, so it is a
+    # real reset: once that is clear (after GLITCH_SECONDS), everything counted
+    # since the reset is new energy.
+    s = series(
+        [(0, 5000.0), (100, 5010.0), (200, 10.0), (400, 30.0), (1200, 60.0)], energy=True
+    )
+    assert s.delta(0, 300) == pytest.approx(10.0)
+    assert s.delta(300, 600) == pytest.approx(0.0)
+    assert s.delta(900, 1200) == pytest.approx(60.0)
+
+
+def test_bad_reading_is_not_a_reset() -> None:
+    # A daily counter reads 0 for one poll, then is back: not a reset. Counting
+    # it as one would count the climb back as new energy (doubling the day).
+    s = series([(0, 5000.0), (100, 5010.0), (200, 0.0), (260, 5020.0)], energy=True)
     assert s.delta(0, 300) == pytest.approx(20.0)
+    # A wrong low reading that is not 0, back a few minutes later.
+    s = series([(0, 5000.0), (100, 5010.0), (200, 12.0), (500, 5030.0)], energy=True)
+    assert s.delta(0, 300) == pytest.approx(10.0)
     assert s.delta(300, 600) == pytest.approx(20.0)
 
 
@@ -340,3 +356,14 @@ async def test_carried_value_needs_a_known_state_at_the_start(hass: HomeAssistan
     assert samples[0].values["v1"] == pytest.approx(0.0)
     # From now on the new value is carried.
     assert baselines == {"v1|sensor.energy|": 9000.0}
+
+
+async def test_bad_reading_across_two_reads_is_not_a_reset(hass: HomeAssistant) -> None:
+    t0 = 1_800_000_000 - 1_800_000_000 % 300
+    # 0 at the end of the first read, back to normal in the second.
+    states = _energy_states(t0, (-10, "1.000"), (100, "1.010"), (250, "0"), (400, "1.020"))
+    baselines: dict = {}
+    energy = await _build_in_two_reads(hass, states, None, baselines)
+    assert sum(energy) == pytest.approx(20.0)
+    # Decided: nothing left pending.
+    assert not any(key.endswith("|pending") for key in baselines)
