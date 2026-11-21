@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.10b2
+
+- **Fix: slots read right after a backup could be incomplete.** Home Assistant locks the recorder's database while a backup copies it (the nightly automatic backup; a 4 GB one held it for about 25 minutes). States arriving meanwhile wait in the recorder's queue, and reads of the history wait for the lock. The first read after it went ahead while the recorder was still writing that queue, so the slots it built lacked part of their history, and a built slot is not read again: on one site b1 and b2 went to PVOutput empty at 05:00 and 05:05 after a 04:45 backup, although the battery sensor never stopped reporting. Recording now waits while the recorder has more than 200 events not yet written, and drops a read that finishes with the recorder that far behind; the same period is read once it has caught up. Uploads of what was read before carry on.
+- **Repairing earlier backups:** **Configure → Import history from Home Assistant** for the period, with *Replace recorded values* and *Send to PVOutput* on (within the recorder's keep days). A plain reupload resends the stored values and would not add the missing ones.
+
 ## 0.1.10b1
 
 - **Fix: a bad counter reading could double the day's energy.** A drop of more than 10% in an energy counter was taken as a reset at once, so a counter that read 0 (or another wrong low value) for one poll and then came back had its climb back counted as new energy: the day doubled for a daily counter, and a lifetime counter would have added its whole total. A drop now counts as a reset only if the counter stays down; back near its old value within 15 minutes, it was a bad reading and only the real increase is counted. This also holds when the bad reading falls on a boundary between two reads of the recorder. Reported on the PVOutput forum (Sigenergy Local Modbus).

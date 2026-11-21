@@ -30,6 +30,7 @@ from .builder import (
     Source,
     async_build_from_states,
     async_build_from_statistics,
+    recorder_backlog,
 )
 from .const import (
     DIRECTION_DOWNLOAD,
@@ -38,6 +39,7 @@ from .const import (
     MAP_DIRECTION,
     MODE_DOWNLOAD,
     MODE_RECORD,
+    RECORDER_BUSY_BACKLOG,
     MODE_SEND,
     AGG_ENERGY_TODAY,
     AGG_LAST,
@@ -398,6 +400,8 @@ class Uploader:
             )
             return
         last = _align_down(last, LOG_INTERVAL)
+        if self._recorder_busy():
+            return
         # Each energy counter's last value, carried from one read to the next so
         # no increment across a read boundary is lost (see the builder).
         raw = await self._run(self.store.get_meta, META_ENERGY_BASELINES)
@@ -409,6 +413,12 @@ class Uploader:
             samples = await async_build_from_states(
                 self.hass, self.sources, last, end, baselines
             )
+            # A read that waited through a database lock (a backup) returns
+            # before the recorder has written the states it queued meanwhile.
+            # Such samples would be final and incomplete: drop them, and read
+            # the same period again once the recorder has caught up.
+            if self._recorder_busy():
+                return
             await self._run(self.store.add_samples, samples)
             last = end
             # One checkpoint: the time read up to and the counters at that time.
@@ -416,6 +426,16 @@ class Uploader:
                 self.store.set_metas,
                 {META_LAST_BUILT: str(last), META_ENERGY_BASELINES: json.dumps(baselines)},
             )
+
+    def _recorder_busy(self) -> bool:
+        """Return whether the recorder is behind, e.g. locked for a backup."""
+        backlog = recorder_backlog(self.hass)
+        if backlog <= RECORDER_BUSY_BACKLOG:
+            return False
+        _LOGGER.debug(
+            "Recorder has %s events not yet written (backup?); recording waits", backlog
+        )
+        return True
 
     # Download
 

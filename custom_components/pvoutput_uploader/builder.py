@@ -202,6 +202,17 @@ class _Series:
         return end - (start or 0.0)
 
 
+def recorder_backlog(hass: HomeAssistant) -> int:
+    """Return how many events the recorder has queued but not yet written.
+
+    0 when there is no recorder (it is set up after this integration in tests).
+    """
+    try:
+        return get_instance(hass).backlog
+    except KeyError:
+        return 0
+
+
 def _state_ts(state: Any) -> float:
     ts = getattr(state, "last_updated_timestamp", None)
     return ts if ts is not None else state.last_updated.timestamp()

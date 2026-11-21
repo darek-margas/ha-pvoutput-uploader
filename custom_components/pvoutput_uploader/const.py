@@ -142,6 +142,11 @@ OUTPUT_BATCH_DONOR: Final = 30
 
 # Wait this long after a 5 minute slot closes before reading it from the recorder.
 SETTLE_SECONDS: Final = 60
+# Recording waits while the recorder has more than this many events queued and
+# not yet written. Normally it has a handful; during a backup's database lock
+# (HA's nightly backup, ~25 min for a 4 GB backup) it holds every state, and
+# right after the lock it is still writing them.
+RECORDER_BUSY_BACKLOG: Final = 200
 # Recorder history is read in chunks of this many seconds.
 HISTORY_CHUNK_SECONDS: Final = 6 * 3600
 MAX_CHUNKS_PER_CYCLE: Final = 8

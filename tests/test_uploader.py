@@ -1542,3 +1542,56 @@ async def test_recording_carries_counters_between_reads(
         now.tick(300)
         await again._async_record()
     assert seen == [{}, {"v1|sensor.x|": 1001.0}, {"v1|sensor.x|": 1002.0}]
+
+
+async def test_recording_waits_while_the_recorder_is_behind(
+    hass: HomeAssistant, tmp_path: Path, now: FrozenDateTimeFactory
+) -> None:
+    """A backup's database lock: nothing is read until the recorder has caught up."""
+    up = await make(hass, tmp_path, [field("v2")])
+    start = local_ts(10, 10, 10, 0)
+    await up._run(up.store.set_meta, META_LAST_BUILT, str(start))
+    reads = []
+
+    async def from_states(hass_, sources, start_, end, baselines=None):
+        reads.append((start_, end))
+        return [Sample(end, {"v2": 100.0})]
+
+    with (
+        patch.object(uploader_module, "async_build_from_states", side_effect=from_states),
+        patch.object(uploader_module, "recorder_backlog", return_value=5000),
+    ):
+        await up._async_record()
+    assert reads == []
+    assert await up._run(up.store.get_meta, META_LAST_BUILT) == str(start)
+
+    with (
+        patch.object(uploader_module, "async_build_from_states", side_effect=from_states),
+        patch.object(uploader_module, "recorder_backlog", return_value=3),
+    ):
+        await up._async_record()
+    assert reads[0][0] == start
+    assert int(await up._run(up.store.get_meta, META_LAST_BUILT)) > start
+
+
+async def test_read_that_waited_through_a_lock_is_dropped(
+    hass: HomeAssistant, tmp_path: Path, now: FrozenDateTimeFactory
+) -> None:
+    """The read returns as the lock ends, with the recorder still writing its
+    queue: those samples would be incomplete, so they are not kept."""
+    up = await make(hass, tmp_path, [field("v2")])
+    start = local_ts(10, 10, 10, 0)
+    await up._run(up.store.set_meta, META_LAST_BUILT, str(start))
+    backlog = [0]
+
+    async def from_states(hass_, sources, start_, end, baselines=None):
+        backlog[0] = 60000          # the lock held the read; the queue is full
+        return [Sample(start_ + 300, {"v2": None})]
+
+    with (
+        patch.object(uploader_module, "async_build_from_states", side_effect=from_states),
+        patch.object(uploader_module, "recorder_backlog", side_effect=lambda h: backlog[0]),
+    ):
+        await up._async_record()
+    assert await up._run(up.store.get_meta, META_LAST_BUILT) == str(start)
+    assert await up._run(up.store.samples_between, start, start + 3600) == []
