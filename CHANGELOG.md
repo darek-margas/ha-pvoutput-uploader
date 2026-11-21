@@ -4,6 +4,7 @@
 
 - **Fix: slots read right after a backup could be incomplete.** Home Assistant locks the recorder's database while a backup copies it (the nightly automatic backup; a 4 GB one held it for about 25 minutes). States arriving meanwhile wait in the recorder's queue, and reads of the history wait for the lock. The first read after it went ahead while the recorder was still writing that queue, so the slots it built lacked part of their history, and a built slot is not read again: on one site b1 and b2 went to PVOutput empty at 05:00 and 05:05 after a 04:45 backup, although the battery sensor never stopped reporting. Recording now waits while the recorder has more than 200 events not yet written, and drops a read that finishes with the recorder that far behind; the same period is read once it has caught up. Uploads of what was read before carry on.
 - **Repairing earlier backups:** **Configure → Import history from Home Assistant** for the period, with *Replace recorded values* and *Send to PVOutput* on (within the recorder's keep days). A plain reupload resends the stored values and would not add the missing ones.
+- **Tested on Home Assistant 2026.10, not 2026.11.** The test harness (pytest-homeassistant-custom-component) has no release for 2026.11 yet; its newest, for 2026.10.4, fails to load under 2026.11.0 (an httpx import order and a removed private logger function), so CI ran on 2026.10.4. Nothing in this fix depends on what changed in 2026.11: the recorder's backlog count it reads is the same there.
 
 ## 0.1.10b1
 
