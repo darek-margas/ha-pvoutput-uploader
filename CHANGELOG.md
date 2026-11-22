@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.1.10
+
+Stable release of 0.1.10b1 and b2: two recording fixes, both found on real sites.
+
+- **A bad counter reading no longer doubles the day's energy.** An energy counter that dropped by more than 10% was taken as reset at once. A Modbus integration reading 0 for one poll then had its climb back counted as new energy: the day doubled on a daily counter, and a lifetime counter would have added its whole total. A drop now counts as a reset only if the counter stays down for 15 minutes; if it comes back sooner, only the real increase is counted, also when the bad reading falls between two reads of the recorder. Reported on the PVOutput forum (Sigenergy Local Modbus).
+- **Slots read right after a backup are complete again.** Home Assistant locks the recorder's database while a backup copies it; a 4 GB backup held it for about 25 minutes. The first read after the lock ran while the recorder was still writing the states it had queued, and a built slot is never read again: on one site b1 and b2 went to PVOutput empty at 05:00 and 05:05 after a 04:45 backup. Recording now waits until the recorder has caught up.
+- **HACS installs from a release zip** (`pvoutput_uploader.zip`, attached to every release), so the HACS store shows a download count.
+- **Shared setups:** SolarEdge Modbus Multi, and the extended Sigenergy setup now uses the inverter's lifetime PV counter for v1.
+
+Both fixes need the recorder's data to repair what they already affected: **Configure → Import history from Home Assistant** for those days, with *Replace recorded values* and *Send to PVOutput* on, within the recorder's keep days (10 by default). A plain reupload only resends what is stored.
+
+Tested on Home Assistant 2026.10; the test harness has no 2026.11 release yet.
+
+Details per beta below.
+
 ## 0.1.10b2
 
 - **Fix: slots read right after a backup could be incomplete.** Home Assistant locks the recorder's database while a backup copies it (the nightly automatic backup; a 4 GB one held it for about 25 minutes). States arriving meanwhile wait in the recorder's queue, and reads of the history wait for the lock. The first read after it went ahead while the recorder was still writing that queue, so the slots it built lacked part of their history, and a built slot is not read again: on one site b1 and b2 went to PVOutput empty at 05:00 and 05:05 after a 04:45 backup, although the battery sensor never stopped reporting. Recording now waits while the recorder has more than 200 events not yet written, and drops a read that finishes with the recorder that far behind; the same period is read once it has caught up. Uploads of what was read before carry on.
