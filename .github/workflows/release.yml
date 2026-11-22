@@ -96,6 +96,8 @@ jobs:
             echo "$ASSET is already on $TAG."
             exit 0
           fi
+          # A tag the previous step just created exists only on GitHub, not in this checkout.
+          git fetch --force origin "refs/tags/$TAG:refs/tags/$TAG"
           rm -rf /tmp/zip && mkdir /tmp/zip
           git archive "$TAG" custom_components/pvoutput_uploader | tar -x -C /tmp/zip
           (cd /tmp/zip/custom_components/pvoutput_uploader && zip -r -X "/tmp/$ASSET" .)
